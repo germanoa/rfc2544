@@ -62,8 +62,8 @@ int main(int argc, char *argv[])
 		error("Opening socket");
 	}
 
-	tv.tv_sec = 1;
-	tv.tv_usec = 0;
+	tv.tv_sec = 0;
+	tv.tv_usec = 10;
 	if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO,&tv,sizeof(tv)) < 0) {
 	    perror("Error");
 	}
