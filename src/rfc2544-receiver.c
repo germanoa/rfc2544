@@ -31,8 +31,8 @@ void clear_bench()
 void inc_bench(int size)
 {
 	rcv_frames++;
-	//sum+=size;
-	sum += size + HEADERS;
+	sum+=size;
+	//sum += size + HEADERS;
 }
 
 void report_bench()
@@ -50,6 +50,7 @@ int main(int argc, char *argv[])
 	struct sockaddr_in server;
 	struct sockaddr_in from;
 	int rcv_buf[1024], send_buf[1024];
+	struct timeval tv;
 	
 	if (argc < 2) {
 		fprintf(stderr, "Usage: port\n");
@@ -60,6 +61,13 @@ int main(int argc, char *argv[])
 	if (sock < 0) {
 		error("Opening socket");
 	}
+
+	tv.tv_sec = 1;
+	tv.tv_usec = 0;
+	if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO,&tv,sizeof(tv)) < 0) {
+	    perror("Error");
+	}
+
 	length = sizeof(server);
 	bzero(&server,length);
 	server.sin_family=AF_INET;
@@ -77,14 +85,14 @@ int main(int argc, char *argv[])
 		n = recvfrom(sock,rcv_buf,1024,0,(struct sockaddr *)&from,
 		 			(socklen_t *)&fromlen);
 		if (n<0) {
-			fprintf(stderr,"recvfrom error\n");
+			if (DEBUG) fprintf(stderr,"recvfrom error\n");
 		}
 		else {
 			data[0] = rcv_buf[0];
 			data[1] = rcv_buf[1];
 
 			if (data[0] == CMD_DATA) {
-				inc_bench(bytes);
+				inc_bench(n);
 				//TODO: data[1] pode ter frame seq.			
 			} else if (data[0] == CMD_SETUP_SYN) {
 				bytes = data[1];
@@ -101,7 +109,7 @@ int main(int argc, char *argv[])
 				if (DEBUG) fprintf(stdout,"Finish syn received.\n");
 				//sprintf(send_buf,"%x",CMD_FINISH_ACK);
 				send_buf[0]=CMD_FINISH_ACK;
-				send_buf[1]=rcv_frames;
+				send_buf[1]=sum;
 				sendto(sock,send_buf, CMD_SIZE, 0,
 					(struct sockaddr*) &from,fromlen);
 

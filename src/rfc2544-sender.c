@@ -17,7 +17,7 @@ void error(char *);
 int main(int argc, char *argv[])
 {
 	int sock, length, n,data[2],sending,bytes,it;
-	long send_frames,rcv_frames;
+	long send_frames,rcv_bytes, send_bytes;
 	struct sockaddr_in server;
 	struct hostent *hp;
 	int rcv_buf[1024],send_buf[1024];
@@ -76,8 +76,9 @@ int main(int argc, char *argv[])
 		} else {
 
 			//sending
-			send_frames=0;
+			send_frames = 0;
 			it = ONE_SECOND / udelay;
+			send_bytes = 0;
 
 			while(it--) { /* 1 second? */
 				//sprintf(send_buf,"%x",CMD_DATA);
@@ -88,6 +89,7 @@ int main(int argc, char *argv[])
 					error("Sendto");
 				} else {
 					send_frames++;
+					send_bytes+=n;
 				}
 				usleep(udelay);
 			}
@@ -115,21 +117,22 @@ int main(int argc, char *argv[])
                 	data[1] = rcv_buf[1];
                 	if (data[0]==CMD_FINISH_ACK) {
 				sending=0;
-				rcv_frames = data[1];	
+				rcv_bytes = data[1];	
 			}
 			//end finish
 
-			fprintf(stdout,"pps:%lu udelay:%f\n",send_frames,udelay);
+			fprintf(stdout,"Bps:%lu pps:%lu udelay:%f\n",
+				send_bytes,send_frames,udelay);
 
 			if (asc) {
-				if (rcv_frames < send_frames) {
+				if (rcv_bytes < send_bytes) {
 					if (DEBUG) fprintf(stdout,"go to !asc\n");
 					asc = 0;
 				} else {
 					udelay = udelay / 2.0;
 				}
 			} else {
-				if (rcv_frames == send_frames) {
+				if (rcv_bytes == send_bytes) {
 					ok = 1;
 					fprintf(stdout,"THAT'S THE POINT!%f\n",udelay);
 				} else {
