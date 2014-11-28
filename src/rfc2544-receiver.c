@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
 		n = recvfrom(sock,rcv_buf,1024,0,(struct sockaddr *)&from,
 		 			(socklen_t *)&fromlen);
 		if (n<0) {
-			if (DEBUG) fprintf(stderr,"recvfrom error\n");
+			//if (DEBUG) fprintf(stderr,"recvfrom error\n");
 		}
 		else {
 			data[0] = rcv_buf[0];

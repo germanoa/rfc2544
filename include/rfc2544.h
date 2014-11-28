@@ -22,6 +22,10 @@
 //#define DELAY 100000
 #define DELAY 1
 
+#define SETUP 0X2
+#define SEND 0x4
+#define FINISH 0x8
+
 #define DEBUG 0 /* 1 -> on ; 0 -> off */
 
 #endif /* _INCLUDE_RFC_2544_ */
