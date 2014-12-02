@@ -1,0 +1,19 @@
+inf01146@lais03-desktop:~/bench_rfc2544$ ./script.sh 
+rm bin/*
+gcc -Wall -g3 -I include src/rfc2544-receiver.c -o bin/receiver
+gcc -Wall -g3 -I include src/rfc2544-sender.c -o bin/sender
+bin/sender 192.168.2.2 5002 64
+64,155674,4096,244.140625
+bin/sender 192.168.2.2 5002 128
+128,417818,4096,244.140625
+bin/sender 192.168.2.2 5002 256
+256,471066,2048,488.281250
+bin/sender 192.168.2.2 5002 512
+512,995354,2048,488.281250
+bin/sender 192.168.2.2 5002 1024
+1024,1021978,1024,976.562500
+bin/sender 192.168.2.2 5002 1280
+1280,26,0,2000000.000000
+bin/sender 192.168.2.2 5002 1518
+1518,26,0,2000000.000000
+
