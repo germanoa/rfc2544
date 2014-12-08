@@ -11,20 +11,25 @@
 #include <stdlib.h>
 #include <strings.h>
 #include <math.h>
+#include <sys/time.h>
 
 #include "rfc2544.h"
 
 void error(char *);
 int main(int argc, char *argv[])
 {
-	int y,sock, length, n,data[2],status,bytes,it;
+	int i,y,sock, length, n,data[2],status,bytes,it;
 	long send_frames,rcv_bytes, send_bytes;
 	struct sockaddr_in server;
 	struct hostent *hp;
-	int rcv_buf[1024],send_buf[1024];
+	float rcv_buf[1024],send_buf[1024];
 	int ok=0;
 	float udelay;
-	struct timeval tv;
+	struct timeval tv,now;
+	float avg_between_send = 0.0;
+	float avg_between_send_rcv = 0.0;
+	float last_send_time;
+	float now_send_time;
 	
 	if (argc != 4) {
 		printf("Usage: server port bytes\n");
@@ -48,7 +53,7 @@ int main(int argc, char *argv[])
 	length=sizeof(struct sockaddr_in);
 
 	bytes = atoi(argv[3]);
-	bytes-= HEADERS;
+	bytes -= HEADERS;
 	//printf("%d - %d = %d\n",atoi(argv[3]),HEADERS, bytes);
 
 
@@ -86,8 +91,10 @@ int main(int argc, char *argv[])
 			send_frames = 0;
 			it = ONE_SECOND / udelay;
 			send_bytes = 0;
+			avg_between_send = 0;
+			
 
-			while(it--) { /* 1 second? */
+			for (i=0;i<it;++i) { /* 1 second? */
 				//sprintf(send_buf,"%x",CMD_DATA);
 				send_buf[0] = CMD_DATA;
 				n = sendto(sock,send_buf,bytes,0,
@@ -99,8 +106,21 @@ int main(int argc, char *argv[])
 					send_bytes+=n;
 				}
 				usleep(udelay);
+				gettimeofday(&now,NULL);
+				now_send_time = (now.tv_sec * 1000000);	
+				now_send_time += (now.tv_usec);	
+
+				if (i==0) {
+					last_send_time = now_send_time;
+				} else {
+					avg_between_send += now_send_time;
+					avg_between_send -= last_send_time;
+					last_send_time = now_send_time;
+				}
 			}
+			avg_between_send /= it;
 			status = FINISH;
+
 		} else if (status == FINISH) {
 			//begin finish
 			send_buf[0]=CMD_FINISH_SYN;
@@ -121,14 +141,17 @@ int main(int argc, char *argv[])
                 	data[0] = rcv_buf[0];
                 	data[1] = rcv_buf[1];
                 	if (data[0]==CMD_FINISH_ACK) {
-				status = SETUP;
-				rcv_bytes = data[1];	
-			}
+										status = SETUP;
+										rcv_bytes = data[1];
+										avg_between_send_rcv = rcv_buf[2];	
+									}
 			//end finish
 
-			if (DEBUG) fprintf(stdout,"Bps:%lu pps:%lu udelay:%f\n",
-				send_bytes,send_frames,udelay);
-
+			if (DEBUG) {
+				fprintf(stdout,"Bps:%lu pps:%lu udelay:%f - %f,%f\n",
+				send_bytes + (send_frames * HEADERS),send_frames,udelay
+							,avg_between_send,avg_between_send_rcv);
+			};
 
 			if (status == SETUP) {
 				if (rcv_bytes == send_bytes) {
@@ -138,8 +161,9 @@ int main(int argc, char *argv[])
 						ok = 1;
 						//REPORT
 						send_bytes+= (send_frames * HEADERS);
-						printf("%d,%lu,%lu,%f\n",
-							bytes+HEADERS,send_bytes,send_frames,udelay);
+						printf("%d,%lu,%lu,%f,%f,%f\n",
+							bytes+HEADERS,send_bytes,send_frames,udelay,
+							avg_between_send,avg_between_send_rcv);
 					}
 				} else {
 					udelay = udelay * y;

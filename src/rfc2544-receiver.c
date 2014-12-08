@@ -9,12 +9,15 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <strings.h>
+#include <sys/time.h>
 
 #include "rfc2544.h"
 
 int bytes;
 long send_frames, rcv_frames, sum;
 int first_report=1;
+int first=1;
+float avg_between_send = 0.0;
 
 void error(char *msg)
 {
@@ -26,6 +29,8 @@ void clear_bench()
 {
 	rcv_frames=0;
 	sum=0;
+	first=1;
+	avg_between_send=0.0;
 }
 
 void inc_bench(int size)
@@ -38,10 +43,10 @@ void inc_bench(int size)
 void report_bench()
 {
 	if (first_report) {
-		fprintf(stdout,"#bytes,Bps,pps\n");
+		fprintf(stdout,"#bytes,Bps,pps,u\n");
 		first_report=0;
 	}
-	fprintf(stdout,"%d,%lu,%lu\n",bytes,sum,rcv_frames);
+	fprintf(stdout,"%d,%lu,%lu,%f\n",bytes,sum,rcv_frames,avg_between_send);
 }
 
 int main(int argc, char *argv[])
@@ -49,8 +54,10 @@ int main(int argc, char *argv[])
 	int n, sock, length, fromlen,data[2];
 	struct sockaddr_in server;
 	struct sockaddr_in from;
-	int rcv_buf[1024], send_buf[1024];
-	struct timeval tv;
+	float rcv_buf[1024], send_buf[1024];
+	struct timeval tv,now;
+	float last_send_time;
+	float now_send_time;
 	
 	if (argc < 2) {
 		fprintf(stderr, "Usage: port\n");
@@ -93,9 +100,23 @@ int main(int argc, char *argv[])
 
 			if (data[0] == CMD_DATA) {
 				inc_bench(n);
+				gettimeofday(&now,NULL);
+				now_send_time = (now.tv_sec * 1000000);
+				now_send_time += now.tv_usec;	
+
+				if (first==1) {
+					last_send_time = now_send_time;
+					first=0;
+				} else {
+					avg_between_send += now_send_time;
+					avg_between_send -= last_send_time;
+					last_send_time = now_send_time;
+				}
+			
 				//TODO: data[1] pode ter frame seq.			
 			} else if (data[0] == CMD_SETUP_SYN) {
 				bytes = data[1];
+				bytes += HEADERS;
 				clear_bench();
 				if (DEBUG) fprintf(stdout,"Setup syn received.\n");
 				//sprintf(send_buf,"%x",CMD_SETUP_ACK);
@@ -110,7 +131,9 @@ int main(int argc, char *argv[])
 				//sprintf(send_buf,"%x",CMD_FINISH_ACK);
 				send_buf[0]=CMD_FINISH_ACK;
 				send_buf[1]=sum;
-				sendto(sock,send_buf, CMD_SIZE, 0,
+				avg_between_send /= rcv_frames;
+				send_buf[2]=avg_between_send;
+				sendto(sock,send_buf, CMD_SIZE+2, 0,
 					(struct sockaddr*) &from,fromlen);
 
 				report_bench();
