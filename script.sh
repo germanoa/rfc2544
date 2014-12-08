@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SERVER=192.1.1.1
+SERVER=192.168.1.3
 PORT=5002
 
 DIR=$(dirname $0)
@@ -19,8 +19,8 @@ fi
 make clean
 make
 
-for i in `seq 0 9`
-do
+#for i in `seq 0 9`
+#do
 
 	#for BYTES in `echo "64 128 256 512 1024 1280 1518"`
 	for BYTES in `echo "1518 1280 1024 512 256 128 64"`
@@ -35,4 +35,4 @@ do
 	
 	done
 
-done
+#done
