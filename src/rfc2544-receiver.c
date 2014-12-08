@@ -44,6 +44,7 @@ void report_bench()
 {
 	if (first_report) {
 		fprintf(stdout,"#bytes,Bps,pps,u\n");
+		fflush(stdout);
 		first_report=0;
 	}
 	fprintf(stdout,"%d,%lu,%lu,%f\n",bytes,sum,rcv_frames,avg_between_send);

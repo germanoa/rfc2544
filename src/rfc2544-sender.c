@@ -164,6 +164,7 @@ int main(int argc, char *argv[])
 						printf("%d,%lu,%lu,%f,%f,%f\n",
 							bytes+HEADERS,send_bytes,send_frames,udelay,
 							avg_between_send,avg_between_send_rcv);
+						fflush(stdout);
 					}
 				} else {
 					udelay = udelay * y;
